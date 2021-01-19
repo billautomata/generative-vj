@@ -76,7 +76,7 @@ class App extends React.Component {
 
     setInterval(()=>{
       init(generateFragmentShader())
-    },2500)
+    },2000)
     animate();
 
     function init(fragmentShader) {
