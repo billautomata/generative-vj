@@ -1,8 +1,13 @@
 import React from 'react'
 import logo, { ReactComponent } from './logo.svg';
 import './App.css';
+import Interface from './Interface.js'
 
-import generateFragmentShader from './generateFragmentShader.js'
+import * as d3 from 'd3'
+
+import { generateFragmentShader, setDNA } from './generateFragmentShader.js'
+
+let shaderInit 
 
 const vertexShader = `
 
@@ -22,6 +27,16 @@ void main( void ) {
   float green = abs( sin( position.x * position.y + time / 4.0 ) );
   float blue = abs( sin( position.x * position.y + time / 3.0 ) );
   gl_FragColor = vec4( red, green, blue, 1.0 );
+} 
+`
+
+const emptyFragmentShader = `
+
+uniform float time;
+uniform float time2;
+uniform vec2 resolution; 
+void main( void ) { 
+  gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
 } 
 `
 
@@ -47,6 +62,7 @@ class App extends React.Component {
 
   componentDidMount () {
 
+    let counter = 0
     window.requestAnimationFrame = window.requestAnimationFrame || ( function() {
 
       return  window.webkitRequestAnimationFrame ||
@@ -72,16 +88,12 @@ class App extends React.Component {
                         screenWidth : 0, 
                         screenHeight: 0 };
 
-    init(generateFragmentShader());
-
-    setInterval(()=>{
-      init(generateFragmentShader())
-    },2000)
+    init(emptyFragmentShader);
     animate();
 
     function init(fragmentShader) {
 
-      console.log(fragmentShader)
+      // console.log(fragmentShader)
 
       vertex_shader = vertexShader
       fragment_shader = fragmentShader
@@ -111,11 +123,13 @@ class App extends React.Component {
       // Create Program
 
       currentProgram = createProgram( vertex_shader, fragment_shader );
-
+      parameters.start_time = new Date().getTime()
       timeLocation = gl.getUniformLocation( currentProgram, 'time' );
       resolutionLocation = gl.getUniformLocation( currentProgram, 'resolution' );
 
     }
+
+    window.shaderInit = init
 
     function createProgram( vertex, fragment ) {
 
@@ -192,8 +206,17 @@ class App extends React.Component {
 
     function animate() {
 
-      resizeCanvas();
+      resizeCanvas();      
       render();
+
+      counter += 1
+      if(counter > 3000000000) {
+        counter = 0
+        setDNA({data: d3.range(128).map(o=>{return Math.floor(Math.random()*12)}) })
+        init(generateFragmentShader())
+        parameters.start_time = new Date().getTime()
+      }
+
       requestAnimationFrame( animate );
 
     }
@@ -230,7 +253,7 @@ class App extends React.Component {
     return (
       <div className="App">
          <canvas></canvas>
-        <div id="info"></div> 
+        <Interface fns={{generateFragmentShader, setDNA, shaderInit}}/>
       </div>
     );
   }
