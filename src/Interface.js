@@ -82,6 +82,8 @@ export default class Interface extends React.Component {
         .attr('x',x*boxSize).attr('y',y*boxSize)
         .attr('width', boxSize).attr('height', boxSize)
         .attr('fill', bit === 1 ? 'white' : 'black')      
+        // .attr('stroke','green')
+        .attr('stroke-width','0.5px')
 
       rect.on('mouseover', ()=>{      
         const geneIndex = Math.floor(bitIndex / this.bitRate)
@@ -131,42 +133,73 @@ export default class Interface extends React.Component {
     const metadata = this.props.fns.getLineMetaData()
     const shaderLines = this.state.shaderLines.split('\n').map((o,lineIdx)=>{
       return (
-        <div onMouseOver={ ()=>{ 
-          // console.log(metadata.lineBegin, lineIdx)
-          this.setState({
-            matchingCodeLines: [lineIdx]
-          })
-          d3.select(this.svgRef.current).selectAll('rect').attr('stroke', 'none')
+        <div 
+        onClick={ () => {
           const p = metadata[lineIdx - metadata.lineBegin]
-          console.log(p)
+          // console.log(p)
           if(p === undefined) {
             return
           }
           if(p.end > p.begin) {
-            d3.range(p.end-p.begin).forEach(n=>{
-              d3.select(this.svgRef.current).select('rect#_'+n+(p.begin)).attr('stroke', 'orange')
+            const svg = d3.select(this.svgRef.current)
+            d3.range((p.end-p.begin)*this.bitRate).forEach(n=>{
+              console.log(n, p.begin, n+(p.begin*this.bitRate))
+              const rectIndex = (n+(p.begin*this.bitRate))
+              this.bits[rectIndex] = Math.random() > 0.5 ? 1 : 0                
+              svg.select('rect#_'+rectIndex) .attr('fill', this.bits[rectIndex] === 1 ? 'white' : 'black')   
+            })
+            this.props.fns.setDNA({data:this.convertBits()})
+            window.shaderInit(this.props.fns.generateFragmentShader())    
+            this.setState({
+              shaderLines: this.props.fns.generateFragmentShader()
+            })        
+          } else {
+            console.log('wrap around issue')
+          }
+
+        } }
+        onMouseOver={ () => { 
+          // console.log(metadata.lineBegin, lineIdx)
+          this.setState({
+            matchingCodeLines: [lineIdx - metadata.lineBegin]
+          })
+          d3.select(this.svgRef.current).selectAll('rect').attr('stroke', 'none')
+          const p = metadata[lineIdx - metadata.lineBegin]
+          // console.log(p)
+          if(p === undefined) {
+            return
+          }
+          if(p.end > p.begin) {
+            d3.range((p.end-p.begin)*this.bitRate).forEach(n=>{
+              console.log(n, p.begin, n+(p.begin*this.bitRate))
+              const rectIndex = (n+(p.begin*this.bitRate)) 
+              d3.select(this.svgRef.current).select('rect#_'+rectIndex).attr('stroke', 'orange')
             })
           } else {
             console.log('wrap around issue')
           }
-          if(lineIdx >= metadata.lineBegin) {
-            console.log(metadata[lineIdx- metadata.lineBegin])
-          }
         } }
-          style={{
-            outline: this.state.matchingCodeLines.indexOf(lineIdx - metadata.lineBegin) !== -1 ? '1px solid white' : null
-          }}
-        >{o}</div>
+        style={{
+          outline: this.state.matchingCodeLines.indexOf(lineIdx - metadata.lineBegin) !== -1 ? '1px solid white' : null,
+          cursor: 'pointer'
+        }}>
+          {o}
+        </div>
       )
     })
 
     return (
       <>
-      <div style={{ position: 'absolute', top: 0, left: 0, opacity: 0.3, backgroundColor: 'rgba(0,0,0,0)', width: '100%' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, opacity: 1, backgroundColor: 'rgba(0,0,0,0)', width: '100%' }}>
         <svg ref={this.svgRef}/>
       </div>
       <div style={{ position: 'absolute', top: 0, right: 0, opacity: 1, backgroundColor: 'rgba(0,0,0,0)', width: '50%' }}>
-        <div style={{color: 'white', fontFamily: 'monospace', whiteSpace: 'nowrap'}}>
+        <div style={{
+          padding: '10px',
+          color: '#333', 
+          fontFamily: 'monospace', 
+          whiteSpace: 'nowrap', 
+          backgroundColor: 'rgba(255,255,255,0.6)'}}>
           {shaderLines}
         </div>
       </div> 

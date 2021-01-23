@@ -1,5 +1,5 @@
 let compoundArgumentsLength = 6
-let genesLength = 256
+let genesLength = 128
 let linesLength = 24
 
 let currentDNAIndex = 0
