@@ -5,7 +5,7 @@ import Interface from './Interface.js'
 
 import * as d3 from 'd3'
 
-import { generateFragmentShader, setDNA } from './generateFragmentShader.js'
+import { generateFragmentShader, setDNA, getLineMetaData } from './generateFragmentShader.js'
 
 let shaderInit 
 
@@ -143,7 +143,7 @@ class App extends React.Component {
         return null;
       }
 
-      console.log(vs)
+      // console.log(vs)
 
       gl.attachShader( program, vs );
       gl.attachShader( program, fs );
@@ -253,7 +253,7 @@ class App extends React.Component {
     return (
       <div className="App">
          <canvas></canvas>
-        <Interface fns={{generateFragmentShader, setDNA, shaderInit}}/>
+        <Interface fns={{generateFragmentShader, setDNA, shaderInit, getLineMetaData}}/>
       </div>
     );
   }

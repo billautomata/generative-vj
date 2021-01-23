@@ -1,20 +1,25 @@
 import React from 'react'
 import * as d3 from 'd3'
+import { svg } from 'd3'
 
 export default class Interface extends React.Component {
 
   constructor(props) {
     super(props)
     this.svgRef = React.createRef()
+    this.state = {
+      shaderLines: '',
+      matchingCodeLines: []
+    }
     this.bitRate = 4
-    this.geneSize = 64
+    this.geneSize = 128
     this.bits = d3.range(this.bitRate * this.geneSize).map(o=>{
       // return 0
       return Math.random() > 0.5 ? 1 : 0
     })
-    console.log(this.props, 'props')
+    // console.log(this.props, 'props')
     this.convertBits = this.convertBits.bind(this)
-    console.log(d3.drag)
+    // console.log(d3.drag)
   }
 
   convertBits () {
@@ -24,7 +29,7 @@ export default class Interface extends React.Component {
       // console.log(bitArray)
       bytes.push(parseInt(bitArray.join(''),2))
     }
-    console.log('bytes', bytes)
+    // console.log('bytes', bytes)
     return bytes
   }
 
@@ -40,11 +45,11 @@ export default class Interface extends React.Component {
     
     let dragFlipped = []
     drag.on('drag', (event)=>{
-      console.log('drag event', event.x, event.y)
+      // console.log('drag event', event.x, event.y)
       const x = Math.floor(event.x / boxSize)
       const y = Math.floor(event.y / boxSize)
       const index = (y*gridSize) + x
-      console.log(x,y)
+      // console.log(x,y)
       // if(dragFlipped.indexOf(index) === -1) {
       if(dragFlipped[dragFlipped.length-1] !== index) {
         dragFlipped.push(index)
@@ -56,12 +61,14 @@ export default class Interface extends React.Component {
         g.select('rect#_'+index).attr('fill', this.bits[index] === 1 ? 'white' : 'black')      
         this.props.fns.setDNA({data:this.convertBits()})
         window.shaderInit(this.props.fns.generateFragmentShader())    
+        this.setState({
+          shaderLines: this.props.fns.generateFragmentShader()
+        })    
       }
     })
     
     drag.on('start', (event)=>{
       dragFlipped = []
-      console.log("DRAG START")
     })
     g.call(drag)
 
@@ -75,6 +82,20 @@ export default class Interface extends React.Component {
         .attr('x',x*boxSize).attr('y',y*boxSize)
         .attr('width', boxSize).attr('height', boxSize)
         .attr('fill', bit === 1 ? 'white' : 'black')      
+
+      rect.on('mouseover', ()=>{      
+        const geneIndex = Math.floor(bitIndex / this.bitRate)
+        console.log('Gene index', geneIndex)
+        const metadata = this.props.fns.getLineMetaData().map((o,idx)=>{o.idx = idx; return o})        
+        console.log(metadata)
+        const matchingResults = metadata.filter(o=>{ return geneIndex >= o.begin && geneIndex <= o.end })
+        console.log(matchingResults)
+
+        this.setState({
+          matchingCodeLines: matchingResults.map(o=>{return o.idx})
+        })
+
+      })
 
       rect.on('click', ()=>{
         return
@@ -99,15 +120,57 @@ export default class Interface extends React.Component {
 
     setTimeout(()=>{
       this.props.fns.setDNA({data:this.convertBits()})
-      window.shaderInit(this.props.fns.generateFragmentShader())  
+      window.shaderInit(this.props.fns.generateFragmentShader())
+      this.setState({
+        shaderLines: this.props.fns.generateFragmentShader()
+      })  
     },10)
   }
 
   render () {
+    const metadata = this.props.fns.getLineMetaData()
+    const shaderLines = this.state.shaderLines.split('\n').map((o,lineIdx)=>{
+      return (
+        <div onMouseOver={ ()=>{ 
+          // console.log(metadata.lineBegin, lineIdx)
+          this.setState({
+            matchingCodeLines: [lineIdx]
+          })
+          d3.select(this.svgRef.current).selectAll('rect').attr('stroke', 'none')
+          const p = metadata[lineIdx - metadata.lineBegin]
+          console.log(p)
+          if(p === undefined) {
+            return
+          }
+          if(p.end > p.begin) {
+            d3.range(p.end-p.begin).forEach(n=>{
+              d3.select(this.svgRef.current).select('rect#_'+n+(p.begin)).attr('stroke', 'orange')
+            })
+          } else {
+            console.log('wrap around issue')
+          }
+          if(lineIdx >= metadata.lineBegin) {
+            console.log(metadata[lineIdx- metadata.lineBegin])
+          }
+        } }
+          style={{
+            outline: this.state.matchingCodeLines.indexOf(lineIdx - metadata.lineBegin) !== -1 ? '1px solid white' : null
+          }}
+        >{o}</div>
+      )
+    })
+
     return (
+      <>
       <div style={{ position: 'absolute', top: 0, left: 0, opacity: 0.3, backgroundColor: 'rgba(0,0,0,0)', width: '100%' }}>
         <svg ref={this.svgRef}/>
       </div>
+      <div style={{ position: 'absolute', top: 0, right: 0, opacity: 1, backgroundColor: 'rgba(0,0,0,0)', width: '50%' }}>
+        <div style={{color: 'white', fontFamily: 'monospace', whiteSpace: 'nowrap'}}>
+          {shaderLines}
+        </div>
+      </div> 
+      </>
     )
   }
 }

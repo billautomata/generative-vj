@@ -1,9 +1,10 @@
 let compoundArgumentsLength = 6
-let genesLength = 180
-let linesLength = 120
+let genesLength = 256
+let linesLength = 24
 
 let currentDNAIndex = 0
 let dna = []
+let lineMetaData = []
 
 for (let i = 0; i < genesLength; i++) {
   dna.push(Math.floor(Math.random()*12))
@@ -13,7 +14,7 @@ const functions = [
   { name: '', args: 1 }, 
   { name: 'sin', args: 1 },
   { name: 'cos', args: 1 },
-  { name: 'tan', args: 1 },
+  // { name: 'tan', args: 1 },
   { name: 'abs', args: 1 },
   { name: 'fract', args: 1 }
 ]
@@ -22,7 +23,7 @@ const operatorsAssign = [
   { name: '+=' },
   { name: '-=' },
   { name: '*=' },
-  { name: '=' },
+  // { name: '=' },
   // { name: '/=' }
 ]
 
@@ -57,33 +58,12 @@ const constantValues = [
   { name: 'blue' },
 ]
 
-function createLine() {
-  return [
-    r(values).name,
-    r(operatorsAssign).name,
-    r(functions).name + '(',
-    createCompoundValue(1+Math.floor(Math.random()*compoundArgumentsLength)),
-    ');'
-  ].join(' ')
-}
-
-function createCompoundValue(n) {
-  const values = []
-  for(let i = 0; i < n; i++) {
-    if(i !== n-1) {
-      values.push([r(constantValues).name, r(operatorsSimple).name].join(' '))
-    } else {
-      values.push(r(constantValues).name)
-    }    
-  }
-  return values.join(' ')
-}
-
-function r(arr) {
-  return arr[Math.floor(Math.random()*arr.length)]
-}
-
 function createLineDNA() {
+
+  const thisLineMetaData = {
+    begin: currentDNAIndex,
+    end: -1
+  }  
 
   const leftGene = dna[currentDNAIndex]
   currentDNAIndex++
@@ -109,10 +89,11 @@ function createLineDNA() {
   for(let i = 0; i < valueLengthGene; i++) {
     valueGenes.push(dna[currentDNAIndex])
     currentDNAIndex++
+    thisLineMetaData.end = currentDNAIndex -1
     currentDNAIndex = currentDNAIndex % dna.length
   }
 
-  // console.log({leftGene,operatorGene,functionGene,valueLengthGene,valueGenes})
+  lineMetaData.push(thisLineMetaData)
 
   return [
     rDNA(values, leftGene).name,
@@ -147,7 +128,13 @@ function rDNA(arr, value) {
   return arr[value%(arr.length)]
 }
 
+function resetLineMetaData () {
+  lineMetaData = []
+}
+
 function generateFragmentShader() {
+  currentDNAIndex = 0
+  resetLineMetaData()
 
   const lines = []
   lines.push('uniform float time;')
@@ -166,6 +153,8 @@ function generateFragmentShader() {
   lines.push('float green = 0.0;')
   lines.push('float blue = 0.0;')
 
+  lineMetaData.lineBegin = lines.length
+
   for(let i = 0; i < linesLength; i++) {
     lines.push(createLineDNA())
   }
@@ -178,6 +167,7 @@ function generateFragmentShader() {
     displayLines.push([lineIndex,line].join('\t'))
   })
   // console.log(displayLines.join('\n'))
+  // console.log(lineMetaData)
 
   return lines.join('\n')
 
@@ -193,9 +183,13 @@ function setDNA(options) {
 function configure(options) {
   linesLength = options.linesLength
 }
+function getLineMetaData() {
+  return lineMetaData
+}
 
 export {
   configure,
   generateFragmentShader,
-  setDNA
+  setDNA,
+  getLineMetaData
 }
