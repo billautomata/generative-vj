@@ -1,4 +1,4 @@
-let compoundArgumentsLength = 6
+let compoundArgumentsLength = 1
 let genesLength = 128
 let linesLength = 24
 
