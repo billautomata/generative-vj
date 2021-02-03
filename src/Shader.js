@@ -63,7 +63,7 @@ void main( void ) {
 } 
 `
 
-class App extends React.Component {
+class Shader extends React.Component {
 
   constructor(props) {
     super(props)
@@ -270,4 +270,4 @@ class App extends React.Component {
 }
 
 
-export default App
+export default Shader

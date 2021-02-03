@@ -10,53 +10,58 @@ for (let i = 0; i < genesLength; i++) {
   dna.push(Math.floor(Math.random()*12))
 }
 
-const functions = [
-  { name: '', args: 1 }, 
-  { name: 'sin', args: 1 },
-  { name: 'cos', args: 1 },
-  // { name: 'tan', args: 1 },
-  { name: 'abs', args: 1 },
-  { name: 'fract', args: 1 }
-]
+const sourceConfig = {
+  functions: [
+    { name: '', args: 1 }, 
+    { name: 'sin', args: 1 },
+    { name: 'cos', args: 1 },
+    { name: 'tan', args: 1 },
+    { name: 'abs', args: 1 },
+    { name: 'fract', args: 1 }
+  ],
+  operatorsAssign: [
+    { name: '+=' },
+    { name: '-=' },
+    { name: '*=' },
+    { name: '=' },
+    { name: '/=' }
+  ],
+  operatorsSimple: [
+    { name: '*' },
+    { name: '+' },
+    { name: '-' },
+    { name: '/' }
+  ],
+  values: [
+    { name: 'red' },
+    { name: 'green' },
+    { name: 'blue' },
+    { name: 'timeMulti' },
+  ],
+  constantValues: [
+    { name: 'position.x' },
+    { name: 'position.y' },
+    { name: 'time' },
+    { name: 'time2' },
+    { name: 'time*timeMulti' },
+    { name: 'time/timeMulti' },
+    { name: 'distanceToCenter' },
+    { name: 'distanceToBottomLeft' },
+    { name: 'distanceToBottomRight' },
+    { name: 'distanceToTopLeft' },
+    { name: 'distanceToTopRight' },
+    { name: 'red' },
+    { name: 'green' },
+    { name: 'blue' },
+    { name: 'sin(time*0.001)'}
+  ]
+}
 
-const operatorsAssign = [
-  { name: '+=' },
-  { name: '-=' },
-  { name: '*=' },
-  // { name: '=' },
-  // { name: '/=' }
-]
-
-const operatorsSimple = [
-  { name: '*' },
-  { name: '+' },
-  { name: '-' },
-  { name: '/' }
-]
-
-const values = [
-  { name: 'red' },
-  { name: 'green' },
-  { name: 'blue' },
-  { name: 'timeMulti' },
-]
-
-const constantValues = [
-  { name: 'position.x' },
-  { name: 'position.y' },
-  { name: 'time' },
-  { name: 'time2' },
-  { name: 'time*timeMulti' },
-  { name: 'time/timeMulti' },
-  { name: 'distanceToCenter' },
-  { name: 'distanceToBottomLeft' },
-  { name: 'distanceToBottomRight' },
-  { name: 'distanceToTopLeft' },
-  { name: 'distanceToTopRight' },
-  { name: 'red' },
-  { name: 'green' },
-  { name: 'blue' },
-]
+let functions = JSON.parse(JSON.stringify(sourceConfig.functions))
+let operatorsAssign = JSON.parse(JSON.stringify(sourceConfig.operatorsAssign))
+let operatorsSimple = JSON.parse(JSON.stringify(sourceConfig.operatorsSimple))
+let values = JSON.parse(JSON.stringify(sourceConfig.values))
+let constantValues = JSON.parse(JSON.stringify(sourceConfig.constantValues))
 
 function createLineDNA() {
 
@@ -89,7 +94,7 @@ function createLineDNA() {
   for(let i = 0; i < valueLengthGene; i++) {
     valueGenes.push(dna[currentDNAIndex])
     currentDNAIndex++
-    thisLineMetaData.end = currentDNAIndex -1
+    thisLineMetaData.end = currentDNAIndex 
     currentDNAIndex = currentDNAIndex % dna.length
   }
 
@@ -186,10 +191,30 @@ function configure(options) {
 function getLineMetaData() {
   return lineMetaData
 }
+function getConfig () {
+  return {
+    linesLength,
+    functions,
+    operatorsAssign,
+    operatorsSimple,
+    values,
+    constantValues
+  }
+}
+function setConfig (config) {
+  linesLength = config.linesLength
+  functions = JSON.parse(JSON.stringify(config.functions))
+  operatorsAssign = JSON.parse(JSON.stringify(config.operatorsAssign))
+  operatorsSimple = JSON.parse(JSON.stringify(config.operatorsSimple))
+  values = JSON.parse(JSON.stringify(config.values))
+  constantValues = JSON.parse(JSON.stringify(config.constantValues))
+}
 
 export {
   configure,
   generateFragmentShader,
   setDNA,
-  getLineMetaData
+  getLineMetaData,
+  getConfig,
+  setConfig
 }
