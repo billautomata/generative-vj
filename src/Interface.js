@@ -10,6 +10,8 @@ import {
   Grid
 } from '@material-ui/core'
 
+import { generateFragmentShader, setDNA, getLineMetaData, getConfig } from './generateFragmentShader.js'
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faHospitalUser, faFileAlt, faUserPlus, faUserEdit, faUsers } from '@fortawesome/free-solid-svg-icons'
 
@@ -43,6 +45,9 @@ export default class Interface extends React.Component {
 
     this.saveNameRef = React.createRef()
 
+    this.controlsChannel = new BroadcastChannel('controls')
+    this.controlsChannel.postMessage({ connected: true })
+
   }
 
   saveSettings () {
@@ -50,14 +55,16 @@ export default class Interface extends React.Component {
       name: this.saveNameRef.current.value,
       bitRate: this.bitRate,
       bits: this.bits,
-      config: this.props.fns.getConfig()
+      config: getConfig()
     }
     console.log(o)
-    this.writeStoredSettings(this.readStoredSettings().push(o))
+    const s = this.readStoredSettings().push(o)
+    this.writeStoredSettings(s)
   }
 
   readStoredSettings () {
     const o = window.localStorage.getItem(LOCAL_STORAGE_KEY)
+    console.log(o)
     if(o === null) {
       return []
     } else {
@@ -76,9 +83,9 @@ export default class Interface extends React.Component {
 
   loadConfiguration (index) {
     const settings = this.readStoredSettings()
-    window.shaderInit(this.props.fns.generateFragmentShader())    
+    window.shaderInit(generateFragmentShader())    
     this.setState({
-      shaderLines: this.props.fns.generateFragmentShader()
+      shaderLines: generateFragmentShader()
     })        
   }
 
@@ -97,10 +104,10 @@ export default class Interface extends React.Component {
     this.bits = d3.range(this.bitRate * this.geneSize).map(o=>{
       return Math.random() > 0.5 ? 1 : 0
     })
-    this.props.fns.setDNA({data:this.convertBits()})
-    window.shaderInit(this.props.fns.generateFragmentShader())
+    setDNA({data:this.convertBits()})
+    this.controlsChannel.postMessage({ key: 'shader-lines', value: generateFragmentShader() })
     this.setState({
-      shaderLines: this.props.fns.generateFragmentShader(),
+      shaderLines: generateFragmentShader(),
       matchingCodeLines: []
     })
     d3.select(this.svgRef.current).select('g').selectAll('rect').attr('fill', d=>{
@@ -135,10 +142,10 @@ export default class Interface extends React.Component {
           this.bits[index] = 1
         }
         g.select('rect#_'+index).attr('fill', this.bits[index] === 1 ? 'white' : 'black')      
-        this.props.fns.setDNA({data:this.convertBits()})
-        window.shaderInit(this.props.fns.generateFragmentShader())    
+        setDNA({data:this.convertBits()})
+        window.shaderInit(generateFragmentShader())    
         this.setState({
-          shaderLines: this.props.fns.generateFragmentShader()
+          shaderLines: generateFragmentShader()
         })    
       }
     })
@@ -165,7 +172,7 @@ export default class Interface extends React.Component {
       rect.on('mouseover', ()=>{      
         const geneIndex = Math.floor(bitIndex / this.bitRate)
         console.log('Gene index', geneIndex)
-        const metadata = this.props.fns.getLineMetaData().map((o,idx)=>{o.idx = idx; return o})        
+        const metadata = getLineMetaData().map((o,idx)=>{o.idx = idx; return o})        
         console.log(metadata)
         const matchingResults = metadata.filter(o=>{ return geneIndex >= o.begin && geneIndex <= o.end })
         console.log(matchingResults)
@@ -187,8 +194,8 @@ export default class Interface extends React.Component {
         // this.props.setDNA({ data: this.bits })
         // this.convertBits()
         rect.attr('fill', this.bits[bitIndex] === 1 ? 'white' : 'black')      
-        this.props.fns.setDNA({data:this.convertBits()})
-        window.shaderInit(this.props.fns.generateFragmentShader())
+        setDNA({data:this.convertBits()})
+        window.shaderInit(generateFragmentShader())
       })
       x += 1
       if(x > gridSize) {
@@ -197,17 +204,18 @@ export default class Interface extends React.Component {
       }  
     })
 
-    setTimeout(()=>{
-      this.props.fns.setDNA({data:this.convertBits()})
-      window.shaderInit(this.props.fns.generateFragmentShader())
-      this.setState({
-        shaderLines: this.props.fns.generateFragmentShader()
-      })  
-    },10)
+    // setTimeout(()=>{
+    //   setDNA({data:this.convertBits()})
+    //   window.shaderInit(generateFragmentShader())
+    //   this.setState({
+    //     shaderLines: generateFragmentShader()
+    //   })  
+    // },10)
   }
 
   render () {
-    const metadata = this.props.fns.getLineMetaData()
+    // const metadata = getLineMetaData()
+    const metadata = []
     const shaderLines = this.state.shaderLines.split('\n').map((o,lineIdx)=>{
       return (
         <div 
@@ -225,10 +233,10 @@ export default class Interface extends React.Component {
               this.bits[rectIndex] = Math.random() > 0.5 ? 1 : 0                
               svg.select('rect#_'+rectIndex) .attr('fill', this.bits[rectIndex] === 1 ? 'white' : 'black')   
             })
-            this.props.fns.setDNA({data:this.convertBits()})
-            window.shaderInit(this.props.fns.generateFragmentShader())    
+            setDNA({data:this.convertBits()})
+            window.shaderInit(generateFragmentShader())    
             this.setState({
-              shaderLines: this.props.fns.generateFragmentShader()
+              shaderLines: generateFragmentShader()
             })        
           } else {
             console.log('wrap around issue')
@@ -266,33 +274,27 @@ export default class Interface extends React.Component {
     })
 
     return (
-      <>
-      <div style={{ 
-        position: 'absolute', top: 0, left: 0, 
-        opacity: 1, backgroundColor: 'rgba(0,0,0,0)', 
-        padding: '10px',
-        width: '100%' }}>
-        <Grid container spacing={1} alignItems='center' justify='flex-start'>
-          <Grid item style={{width: '160px'}}><Button fullWidth color='default' variant='contained' onClick={()=>{this.setState({showBits: !this.state.showBits})}}>{this.state.showBits ? 'Hide' : 'Show'} DNA</Button></Grid>
-          <Grid item style={{width: '160px'}}><Button fullWidth color='default' variant='contained' onClick={()=>{this.setState({showCode: !this.state.showCode})}}>{this.state.showCode ? 'Hide' : 'Show'} Code</Button></Grid>
-          <Grid item><Button color='default' variant='contained' onClick={this.generateRandom}>Random</Button></Grid>
-          <Grid item><Button color='default' variant='contained' onClick={this.generateRandom}>Reset</Button></Grid>
-          <Grid item><Button color='default' variant='contained' onClick={this.saveSettings}>Save</Button></Grid>                      
-          <Grid item><TextField inputRef={this.saveNameRef} variant='outlined' size='small' fullWidth></TextField></Grid>
+      <Container p={1} m={1} style={{ backgroundColor: '#333', color: 'white' }}>     
+        <Grid container spacing={1} alignItems='center' justify='space-around'>
+          <Grid item xs={6}><Button fullWidth color='default' variant='contained' onClick={()=>{this.setState({showBits: !this.state.showBits})}}>{this.state.showBits ? 'Hide' : 'Show'} DNA</Button></Grid>
+          <Grid item xs={6}><Button fullWidth color='default' variant='contained' onClick={()=>{this.setState({showCode: !this.state.showCode})}}>{this.state.showCode ? 'Hide' : 'Show'} Code</Button></Grid>
+          <Grid item xs={6}><Button fullWidth color='default' variant='contained' onClick={this.generateRandom}>Random</Button></Grid>
+          <Grid item xs={6}><Button fullWidth color='default' variant='contained' onClick={this.generateRandom}>Reset</Button></Grid>
+          <Grid item xs={2}><Button color='default' variant='contained' onClick={this.saveSettings}>Save</Button></Grid>                      
+          <Grid item xs={10}><TextField inputRef={this.saveNameRef} inputProps={{style:{ color: 'white'}}} variant='outlined' size='small' fullWidth></TextField></Grid>
         </Grid>
         <svg ref={this.svgRef} style={{marginTop: 10, display: this.state.showBits ? null : 'none',}}/>
-      </div>
-      <div style={{ display: this.state.showCode ? null : 'none', position: 'absolute', top: 0, right: 0, opacity: 1, backgroundColor: 'rgba(0,0,0,0)', width: '50%' }}>
-        <div style={{
-          padding: '10px',
-          color: '#333', 
-          fontFamily: 'monospace', 
-          whiteSpace: 'nowrap', 
-          backgroundColor: 'rgba(255,255,255,0.6)'}}>
-          {shaderLines}
-        </div>
-      </div> 
-      </>
+        <div style={{ display: this.state.showCode ? null : 'none', position: 'absolute', top: 0, right: 0, opacity: 1, backgroundColor: 'rgba(0,0,0,0)', width: '50%' }}>
+          <div style={{
+            padding: '10px',
+            color: '#333', 
+            fontFamily: 'monospace', 
+            whiteSpace: 'nowrap', 
+            backgroundColor: 'rgba(255,255,255,0.6)'}}>
+            {shaderLines}
+          </div>
+        </div> 
+      </Container>
     )
   }
 }

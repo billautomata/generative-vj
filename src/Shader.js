@@ -1,21 +1,18 @@
 import React from 'react'
 
-import {
-  HashRouter as Router,
-  Switch,
-  Route,
-  Link
-} from "react-router-dom";
+import { 
+  Box, Button, 
+  ButtonGroup,
+  TextField, Typography, 
+  Card, CardHeader, CardContent,
+  Container,
+  Grid
+} from '@material-ui/core'
 
-import { createMuiTheme } from '@material-ui/core/styles'
-import { ThemeProvider } from '@material-ui/styles'
-
-import './App.css';
-import Interface from './Interface.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faHospitalUser, faFileAlt, faUserPlus, faUserEdit, faUsers } from '@fortawesome/free-solid-svg-icons'
 
 import * as d3 from 'd3'
-
-import { generateFragmentShader, setDNA, getLineMetaData, getConfig } from './generateFragmentShader.js'
 
 let shaderInit 
 
@@ -27,49 +24,48 @@ void main() {
 }
 `
 
-const fragmentShader = `
-
-uniform float time;
-uniform vec2 resolution; 
-void main( void ) { 
-  vec2 position = - 1.0 + 2.0 * gl_FragCoord.xy / resolution.xy;
-  float red = abs( sin( position.x * position.y + time / 5.0 ) );
-  float green = abs( sin( position.x * position.y + time / 4.0 ) );
-  float blue = abs( sin( position.x * position.y + time / 3.0 ) );
-  gl_FragColor = vec4( red, green, blue, 1.0 );
-} 
-`
-
 const emptyFragmentShader = `
 
 uniform float time;
 uniform float time2;
 uniform vec2 resolution; 
 void main( void ) { 
-  gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
+  gl_FragColor = vec4( 0.0, 1.0, 0.0, 1.0 );
 } 
 `
 
-const fragmentShader2 = `
-
-uniform float time;
-uniform vec2 resolution; 
-void main( void ) { 
-  vec2 position = - 1.0 + 2.0 * gl_FragCoord.xy / resolution.xy;
-  float red = abs( sin( position.x * position.y + time / .10 ) );
-  float green = abs( sin( position.x * position.y + time / .30 ) );
-  float blue = abs( sin( position.x * position.y + time / .20 ) );
-  gl_FragColor = vec4( red, green, blue, 1.0 );
-} 
-`
+let init 
 
 class Shader extends React.Component {
 
   constructor(props) {
     super(props)
+
+    this.state = {
+      controlsAreConnected: false
+    }
+
+    this.controlsChannel = new BroadcastChannel('controls')
+
+
   }
 
   componentDidMount () {
+    
+    this.controlsChannel.onmessage = (msg) => {
+      console.log('got a controls message')
+      // console.log(msg)
+
+      if(this.state.controlsAreConnected === false) {
+        this.setState({controlsAreConnected: true})
+      }
+
+      if(msg.data.key === 'shader-lines') {
+        // console.log(msg.data)
+        init(msg.data.value)
+      }
+
+    }    
 
     let counter = 0
     window.requestAnimationFrame = window.requestAnimationFrame || ( function() {
@@ -97,10 +93,7 @@ class Shader extends React.Component {
                         screenWidth : 0, 
                         screenHeight: 0 };
 
-    init(emptyFragmentShader);
-    animate();
-
-    function init(fragmentShader) {
+    init = function (fragmentShader) {
 
       // console.log(fragmentShader)
 
@@ -139,6 +132,9 @@ class Shader extends React.Component {
     }
 
     window.shaderInit = init
+
+    init(emptyFragmentShader);
+    animate();
 
     function createProgram( vertex, fragment ) {
 
@@ -218,13 +214,13 @@ class Shader extends React.Component {
       resizeCanvas();      
       render();
 
-      counter += 1
-      if(counter > 3000000000) {
-        counter = 0
-        setDNA({data: d3.range(128).map(o=>{return Math.floor(Math.random()*12)}) })
-        init(generateFragmentShader())
-        parameters.start_time = new Date().getTime()
-      }
+      // counter += 1
+      // if(counter > 3000000000) {
+      //   counter = 0
+      //   setDNA({data: d3.range(128).map(o=>{return Math.floor(Math.random()*12)}) })
+      //   init(generateFragmentShader())
+      //   parameters.start_time = new Date().getTime()
+      // }
 
       requestAnimationFrame( animate );
 
@@ -262,7 +258,11 @@ class Shader extends React.Component {
     return (
       <div className="App">
          <canvas></canvas>
-        <Interface fns={{generateFragmentShader, setDNA, shaderInit, getLineMetaData, getConfig}}/>
+         <div style={{ display: this.state.controlsAreConnected ? 'none' : null,  position: 'absolute', top: 0, left: 0}}>
+           <Box>
+            <Button onClick={()=>{ window.open('/generative-vj/#/controls' )}}>LAUNCH CONTROLS</Button>
+           </Box>
+          </div>
       </div>
     );
   }
